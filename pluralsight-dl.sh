@@ -123,12 +123,14 @@ search_course() {
 
 download_course_list() {
     # $1: course slug
-    local cf l
+    local cf l f
     l="$_URL/learner/content/courses/$1"
     cf=$(get_cf "$l")
+    f="$_SCRIPT_PATH/${1}"
+    mkdir -p "$f"
     $_CURL -sS "$l" \
         --header "User-Agent: $_USER_AGENT" \
-        --header "cookie: cf_clearance=$cf" > "$_SCRIPT_PATH/${1}/$_SOURCE_FILE"
+        --header "cookie: cf_clearance=$cf" > "$f/$_SOURCE_FILE"
 }
 
 fetch_viewclip() {
