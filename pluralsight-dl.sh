@@ -58,6 +58,23 @@ set_args() {
     done
 }
 
+is_jwt_expired() {
+    local o
+    o="yes"
+
+    if [[ -f "$__FILE" && -s "$_JWT_FILE" ]]; then
+        local d n
+        d=$(date -d "$(date -r "$_JWT_FILE") +7 days" +%s)
+        n=$(date +%s)
+
+        if [[ "$n" -lt "$d" ]]; then
+            o="no"
+        fi
+    fi
+
+    echo "$o"
+}
+
 print_info() {
     # $1: info message
     printf "%b\n" "\033[32m[INFO]\033[0m $1" >&2
