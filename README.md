@@ -38,7 +38,9 @@ Options:
 
 ## Limitation
 
-Pluralsight has the request limit. Once the limit is reached, the account will be permanently blocked (403). Therefore, inside the script, there are `_MIN_WAIT_TIME` and `_MAX_WAIT_TIME` in order to generate a random wait time (in second) in-between those 2 values. Hope this wait time will prevent the account being blocked.
+- Pluralsight has a reCAPTCHA challenge to prevent DDoS. Current method is to fetch necessary cookie value from browser opened by puppeteer. Using this method, user must solve reCAPTCHA correctly once per day. The reCAPTCHA page will be prompted in browser.
+
+- Pluralsight has the request limit. Once the limit is reached, the account will be permanently blocked (403). Therefore, inside the script, there are `_MIN_WAIT_TIME` and `_MAX_WAIT_TIME` in order to generate a random wait time (in second) in-between those 2 values. Hope this wait time will prevent the account being blocked.
 
 Do keep in mind that the request limit can be restricted anytime by Pluralsight. Please take your own risk that your account can be blocked when using this script!
 
