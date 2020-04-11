@@ -2,3 +2,5 @@ config
 jwt
 node_modules
 *.json
+*.mp4
+*.list
