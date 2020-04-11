@@ -1,5 +1,6 @@
 config
 jwt
+cf_clearance
 node_modules
 *.json
 *.mp4

@@ -23,7 +23,9 @@ set_var() {
 
     _SCRIPT_PATH=$(dirname "$0")
     _JWT_FILE="$_SCRIPT_PATH/jwt"
+    _CF_FILE="$_SCRIPT_PATH/cf_clearance"
     _LOGIN_JS_SCRIPT="$_SCRIPT_PATH/bin/getjwt.js"
+    _CF_JS_SCRIPT="$_SCRIPT_PATH/bin/getCFcookie.js"
     _SOURCE_FILE=".list"
 
     _CONFIG_FILE="$_SCRIPT_PATH/config"
@@ -57,14 +59,15 @@ set_args() {
         esac
     done
 }
-
-is_jwt_expired() {
+is_file_expired() {
+    # $1: file
+    # $2: n days
     local o
     o="yes"
 
-    if [[ -f "$__FILE" && -s "$_JWT_FILE" ]]; then
+    if [[ -f "$1" && -s "$1" ]]; then
         local d n
-        d=$(date -d "$(date -r "$_JWT_FILE") +7 days" +%s)
+        d=$(date -d "$(date -r "$1") +$2 days" +%s)
         n=$(date +%s)
 
         if [[ "$n" -lt "$d" ]]; then
@@ -87,13 +90,25 @@ print_error() {
 }
 
 get_jwt() {
-    if [[ "$(is_jwt_expired)" == "yes" ]]; then
+    if [[ "$(is_file_expired "$_JWT_FILE" "7")" == "yes" ]]; then
         print_info "Wait for fetching JWT..."
         $_LOGIN_JS_SCRIPT -u "$_USERNAME" -p "$_PASSWORD" -a "$_USER_AGENT" -c "$_CHROME" \
             | $_JQ -r '.[] | select(.name == "PsJwt-production") | .value' \
             | tee "$_JWT_FILE"
     else
         cat "$_JWT_FILE"
+    fi
+}
+
+get_cf() {
+    # $1: url
+    if [[ "$(is_file_expired "$_CF_FILE" "1")" == "yes" ]]; then
+        print_info "Wait for fetching cf_clearance..."
+        $_CF_JS_SCRIPT -u "$1" -a "$_USER_AGENT" -p "$_CHROME" -s \
+            | $_JQ -r '.[] | select(.name == "cf_clearance") | .value' \
+            | tee "$_CF_FILE"
+    else
+        cat "$_CF_FILE"
     fi
 }
 
@@ -108,8 +123,12 @@ search_course() {
 
 download_course_list() {
     # $1: course slug
-    mkdir -p "$_SCRIPT_PATH/${1}"
-    $_CURL -sS "$_URL/learner/content/courses/$1" > "$_SCRIPT_PATH/${1}/$_SOURCE_FILE"
+    local cf l
+    l="$_URL/learner/content/courses/$1"
+    cf=$(get_cf "$l")
+    $_CURL -sS "$l" \
+        --header "User-Agent: $_USER_AGENT" \
+        --header "cookie: cf_clearance=$cf" > "$_SCRIPT_PATH/${1}/$_SOURCE_FILE"
 }
 
 fetch_viewclip() {
