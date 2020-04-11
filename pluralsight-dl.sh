@@ -133,16 +133,18 @@ download_course_list() {
 
 fetch_viewclip() {
     # $1: clip id
-    local jwt t
+    local jwt cf t
     jwt=$(get_jwt)
+    cf=$(get_cf)
     t=$(shuf -i "${_MIN_WAIT_TIME}"-"${_MAX_WAIT_TIME}" -n 1)
     print_info "Wait for ${t}s"
 
     sleep "$t"
 
     $_CURL -sS --request POST "$_URL/video/clips/v3/viewclip" \
-        --header "cookie: PsJwt-production=$jwt" \
+        --header "cookie: PsJwt-production=$jwt; cf_clearance=$cf" \
         --header "content-type: application/json" \
+        --header "User-Agent: $_USER_AGENT" \
         --data "{\"clipId\":\"$1\",\"mediaType\":\"mp4\",\"quality\":\"1280x720\",\"online\":true,\"boundedContext\":\"course\",\"versionId\":\"\"}" \
         | $_JQ -r '.urls[0].url'
 }
