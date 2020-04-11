@@ -1,1 +1,4 @@
 config
+jwt
+node_modules
+*.json
