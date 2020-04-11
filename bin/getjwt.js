@@ -18,7 +18,7 @@ if (program.agent === undefined) {
     return 1;
 }
 
-const cPath = (program.chromepath === undefined) ? '/usr/bin/chromium' : program.path;
+const cPath = (program.chromepath === undefined) ? '/usr/bin/chromium' : program.chromepath;
 const uName = (program.username === undefined) ? '' : program.username;
 const pWord = (program.password === undefined) ? '' : program.password;
 
