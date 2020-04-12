@@ -3,10 +3,11 @@
 # Pluralsight course downloader
 #
 #/ Usage:
-#/   ./pluralsight-dl.sh [-s <slug>]
+#/   ./pluralsight-dl.sh [-s <slug>] [-m <module_num>]
 #/
 #/ Options:
 #/   -s <slug>          Optional, course slug
+#/   -m <module_num>    Optional, specific module to download
 #/   -h | --help        Display this help message
 
 set -e
@@ -44,10 +45,13 @@ set_var() {
 
 set_args() {
     expr "$*" : ".*--help" > /dev/null && usage
-    while getopts ":hs:" opt; do
+    while getopts ":hs:m:" opt; do
         case $opt in
             s)
                 _COURSE_SLUG="$OPTARG"
+                ;;
+            m)
+                _MODULE_NUM="$OPTARG"
                 ;;
             h)
                 usage
@@ -156,8 +160,11 @@ download_clip() {
     local s
     s=$($_JQ -r '.slug' < "$1")
 
+    [[ -n ${_MODULE_NUM:-} ]] && print_info "Searching for module $_MODULE_NUM to download..."
+
     mn=1
     while read -r mt; do
+        if [[ -z "${_MODULE_NUM:-}" || "${_MODULE_NUM:-}" == "$mn" ]]; then
         local c mf
 
         print_info "Find module: $mt"
@@ -178,6 +185,7 @@ download_clip() {
 
             cn=$((cn+1))
         done <<< "$($_JQ -r '.[].title' <<< "$c")"
+        fi
 
         mn=$((mn+1))
     done <<< "$($_JQ -r '.modules[].title' < "$1")"
