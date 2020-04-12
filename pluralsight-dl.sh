@@ -159,7 +159,7 @@ fetch_viewclip() {
     o=$($_CURL -sS --limit-rate 1024K --request POST "$_URL/video/clips/v3/viewclip" \
         --header "cookie: PsJwt-production=$jwt; cf_clearance=$cf" \
         --header "content-type: application/json" \
-        --header "User-Agent: $_USER_AGENT" \
+        --header "user-agent: $_USER_AGENT" \
         --data "{\"clipId\":\"$1\",\"mediaType\":\"mp4\",\"quality\":\"1280x720\",\"online\":true,\"boundedContext\":\"course\",\"versionId\":\"\"}")
     if [[ "$o" == *"status\":403"* ]]; then
         print_error "Account blocked! $o"
