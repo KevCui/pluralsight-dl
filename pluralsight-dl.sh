@@ -43,8 +43,8 @@ set_var() {
     _SEARCH_RESULT_NUM="30"
     _USER_AGENT="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$($_CHROME --version | awk '{print $2}') Safari/537.36"
 
-    _MIN_WAIT_TIME="80"
-    _MAX_WAIT_TIME="150"
+    _MIN_WAIT_TIME="120"
+    _MAX_WAIT_TIME="180"
 }
 
 set_args() {
@@ -135,8 +135,6 @@ download_course_list() {
     # $1: course slug
     local cf f o
     cf=$(get_cf "$_URL")
-    f="$_SCRIPT_PATH/${1}"
-    mkdir -p "$f"
 
     o=$($_CURL -sS "$_URL/player?course=$1" \
         --header "cookie: cf_clearance=$cf" \
@@ -146,7 +144,11 @@ download_course_list() {
         print_info "cf error, retry now"
         rm -f "$_CF_FILE"
         download_course_list "$1"
+    elif [[ "$o" == *"Something unexpected has happened. Please try again."* ]]; then
+        print_error "Cannot find course list!"
     else
+        f="$_SCRIPT_PATH/${1}"
+        mkdir -p "$f"
         grep tableOfContents: <<< "$o" | sed -E 's/.*tableOfContents: //' > "$f/$_SOURCE_FILE"
     fi
 }
