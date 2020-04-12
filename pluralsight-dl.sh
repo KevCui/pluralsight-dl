@@ -144,15 +144,17 @@ fetch_viewclip() {
     cf=$(get_cf)
     t=$(shuf -i "${_MIN_WAIT_TIME}"-"${_MAX_WAIT_TIME}" -n 1)
     print_info "Wait for ${t}s"
-
     sleep "$t"
 
-    $_CURL -sS --request POST "$_URL/video/clips/v3/viewclip" \
+    o=$($_CURL -sS --limit-rate 1024K --request POST "$_URL/video/clips/v3/viewclip" \
         --header "cookie: PsJwt-production=$jwt; cf_clearance=$cf" \
         --header "content-type: application/json" \
         --header "User-Agent: $_USER_AGENT" \
-        --data "{\"clipId\":\"$1\",\"mediaType\":\"mp4\",\"quality\":\"1280x720\",\"online\":true,\"boundedContext\":\"course\",\"versionId\":\"\"}" \
-        | $_JQ -r '.urls[0].url'
+        --data "{\"clipId\":\"$1\",\"mediaType\":\"mp4\",\"quality\":\"1280x720\",\"online\":true,\"boundedContext\":\"course\",\"versionId\":\"\"}")
+    if [[ "$o" == *"status\":403"* ]]; then
+        print_error "Account blocked! $o"
+    fi
+    $_JQ -r '.urls[0].url' <<< "$o"
 }
 
 download_clip() {
@@ -177,7 +179,7 @@ download_clip() {
         while read -r ct; do
             local cid l
 
-            print_info "Downloading $mt - $ct"
+            print_info "Downloading $mn $mt - $cn $ct"
             cid=$($_JQ -r '.[] | select(.title == $title) | .clipId' --arg title "$ct" <<< "$c")
             l=$(fetch_viewclip "$cid")
 
