@@ -179,7 +179,7 @@ download_clip() {
         while read -r ct; do
             local cid l
 
-            print_info "Downloading $mn $mt - $cn $ct"
+            print_info "Downloading [$mn $mt - $cn $ct]"
             cid=$($_JQ -r '.[] | select(.title == $title) | .clipId' --arg title "$ct" <<< "$c")
             l=$(fetch_viewclip "$cid")
 
