@@ -3,11 +3,12 @@
 # Pluralsight course downloader
 #
 #/ Usage:
-#/   ./pluralsight-dl.sh [-s <slug>] [-m <module_num>]
+#/   ./pluralsight-dl.sh [-s <slug>] [-m <module_num>] [-c <clip_num>]
 #/
 #/ Options:
 #/   -s <slug>          Optional, course slug
 #/   -m <module_num>    Optional, specific module to download
+#/   -c <clip_num>      Optional, specific clip to download
 #/   -h | --help        Display this help message
 
 set -e
@@ -48,13 +49,16 @@ set_var() {
 
 set_args() {
     expr "$*" : ".*--help" > /dev/null && usage
-    while getopts ":hs:m:" opt; do
+    while getopts ":hs:m:c:" opt; do
         case $opt in
             s)
                 _COURSE_SLUG="$OPTARG"
                 ;;
             m)
                 _MODULE_NUM="$OPTARG"
+                ;;
+            c)
+                _CLIP_NUM="$OPTARG"
                 ;;
             h)
                 usage
@@ -180,20 +184,22 @@ download_clip() {
         local c mf
 
         print_info "Find module: $mt"
-        mf="$_SCRIPT_PATH/$s/${mn}-${mt}"
+        mf="$_SCRIPT_PATH/$s/${mn}-${mt//\//_}"
         mkdir -p "$mf"
 
         c=$($_JQ -r '.modules[] | select(.title == $title) | .contentItems' --arg title "$mt" < "$1")
 
         cn=1
         while read -r ct; do
-            local cid l
+            if [[ -z "${_CLIP_NUM:-}" || "${_CLIP_NUM:-}" == "$cn" ]]; then
+                local cid l
 
-            print_info "Downloading [$mn $mt - $cn $ct]"
-            cid=$($_JQ -r '.[] | select(.title == $title) | .id' --arg title "$ct" <<< "$c")
-            l=$(fetch_viewclip "$cid")
+                print_info "Downloading [$mn $mt - $cn $ct]"
+                cid=$($_JQ -r '.[] | select(.title == $title) | .id' --arg title "$ct" <<< "$c")
+                l=$(fetch_viewclip "$cid")
 
-            $_CURL -L -g -o "${mf}/${cn}-${ct}.mp4" "$l"
+                $_CURL -L -g -o "${mf}/${cn}-${ct//\//_}.mp4" "$l"
+            fi
 
             cn=$((cn+1))
         done <<< "$($_JQ -r '.[].title' <<< "$c")"
