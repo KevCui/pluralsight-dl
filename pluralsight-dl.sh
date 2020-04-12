@@ -37,6 +37,9 @@ set_var() {
     [[ -z "$_PASSWORD" ]] && print_error "Password not found in $_CONFIG_FILE"
 
     _URL="https://app.pluralsight.com"
+    _SEARCH_URL="https://api-us1.cludo.com/api/v3/10000847/10001278/search"
+    _SEARCH_SITE_KEY="SiteKey MTAwMDA4NDc6MTAwMDEyNzg6U2VhcmNoS2V5"
+    _SEARCH_RESULT_NUM="30"
     _USER_AGENT="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$($_CHROME --version | awk '{print $2}') Safari/537.36"
 
     _MIN_WAIT_TIME="80"
@@ -118,31 +121,29 @@ get_cf() {
 
 search_course() {
     # $1: search text
-    local jwt
-    jwt=$(get_jwt)
-    $_CURL -sS "$_URL/search/api/unstable/unified?query=$1&types=video-course&sort=relevance" \
-        --header 'x-client-id: 3fc7935d-ff30-4a7f-86f4-f32699378b5e' \
-        --header "cookie: PsJwt-production=$jwt"
+    $_CURL -sS --request POST "$_SEARCH_URL" \
+        --header "authorization: $_SEARCH_SITE_KEY" \
+        --header 'content-type: application/json; charset=UTF-8' \
+        --data '{"ResponseType":"json","query":"'"$1"'","facets":{"categories":["course"]},"enableFacetFiltering":"true","page":1,"perPage":"'"$_SEARCH_RESULT_NUM"'","operator":"and"}'
 }
 
 download_course_list() {
     # $1: course slug
-    local cf l f o
-    l="$_URL/learner/content/courses/$1"
-    cf=$(get_cf "$l")
+    local cf f o
+    cf=$(get_cf "$_URL")
     f="$_SCRIPT_PATH/${1}"
     mkdir -p "$f"
 
-    o=$($_CURL -sS "$l" \
-        --header "User-Agent: $_USER_AGENT" \
-        --header "cookie: cf_clearance=$cf")
+    o=$($_CURL -sS "$_URL/player?course=$1" \
+        --header "cookie: cf_clearance=$cf" \
+        --header "user-agent: $_USER_AGENT")
 
     if [[ "$o" == *"Please complete the security check to access the site."* ]]; then
         print_info "cf error, retry now"
         rm -f "$_CF_FILE"
         download_course_list "$1"
     else
-        echo "$o" > "$f/$_SOURCE_FILE"
+        grep tableOfContents: <<< "$o" | sed -E 's/.*tableOfContents: //' > "$f/$_SOURCE_FILE"
     fi
 }
 
@@ -150,7 +151,7 @@ fetch_viewclip() {
     # $1: clip id
     local jwt cf t
     jwt=$(get_jwt)
-    cf=$(get_cf)
+    cf=$(get_cf "$_URL")
     t=$(shuf -i "${_MIN_WAIT_TIME}"-"${_MAX_WAIT_TIME}" -n 1)
     print_info "Wait for ${t}s"
     sleep "$t"
@@ -182,14 +183,14 @@ download_clip() {
         mf="$_SCRIPT_PATH/$s/${mn}-${mt}"
         mkdir -p "$mf"
 
-        c=$($_JQ -r '.modules[] | select(.title == $title) | .clips' --arg title "$mt" < "$1")
+        c=$($_JQ -r '.modules[] | select(.title == $title) | .contentItems' --arg title "$mt" < "$1")
 
         cn=1
         while read -r ct; do
             local cid l
 
             print_info "Downloading [$mn $mt - $cn $ct]"
-            cid=$($_JQ -r '.[] | select(.title == $title) | .clipId' --arg title "$ct" <<< "$c")
+            cid=$($_JQ -r '.[] | select(.title == $title) | .id' --arg title "$ct" <<< "$c")
             l=$(fetch_viewclip "$cid")
 
             $_CURL -L -g -o "${mf}/${cn}-${ct}.mp4" "$l"
@@ -216,11 +217,11 @@ main() {
         while read -r l; do
             printf "%b\n" "\033[33m[$i]\033[0m $l"
             i=$((i+1))
-        done <<< "$($_JQ -r '.search."video-course".hits[].csTitle' <<< "$j")"
+        done <<< "$($_JQ -r '.TypedDocuments[].Fields.Title.Value' <<< "$j")"
 
         echo -n ">> Select which number to download: "
         read -r num
-        _COURSE_SLUG=$($_JQ -r '.search."video-course".hits[($id | tonumber)].csSlug' --arg id "$((num-1))" <<< "$j")
+        _COURSE_SLUG=$($_JQ -r '.TypedDocuments[($id | tonumber)].Fields.prodId.Value' --arg id "$((num-1))" <<< "$j")
     fi
 
     download_course_list "$_COURSE_SLUG"
