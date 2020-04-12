@@ -127,14 +127,23 @@ search_course() {
 
 download_course_list() {
     # $1: course slug
-    local cf l f
+    local cf l f o
     l="$_URL/learner/content/courses/$1"
     cf=$(get_cf "$l")
     f="$_SCRIPT_PATH/${1}"
     mkdir -p "$f"
-    $_CURL -sS "$l" \
+
+    o=$($_CURL -sS "$l" \
         --header "User-Agent: $_USER_AGENT" \
-        --header "cookie: cf_clearance=$cf" > "$f/$_SOURCE_FILE"
+        --header "cookie: cf_clearance=$cf")
+
+    if [[ "$o" == *"Please complete the security check to access the site."* ]]; then
+        print_info "cf error, retry now"
+        rm -f "$_CF_FILE"
+        download_course_list "$1"
+    else
+        echo "$o" > "$f/$_SOURCE_FILE"
+    fi
 }
 
 fetch_viewclip() {
