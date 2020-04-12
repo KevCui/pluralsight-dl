@@ -170,7 +170,7 @@ fetch_viewclip() {
 download_clip() {
     # $1: course list
     local s
-    s=$($_JQ -r '.slug' < "$1")
+    s=$($_JQ -r '.deprecatedCourseId' < "$1")
 
     [[ -n ${_MODULE_NUM:-} ]] && print_info "Searching for module $_MODULE_NUM to download..."
 
