@@ -3,12 +3,14 @@
 # Pluralsight course downloader
 #
 #/ Usage:
-#/   ./pluralsight-dl.sh [-s <slug>] [-m <module_num>] [-c <clip_num>]
+#/   ./pluralsight-dl.sh [-s <slug>] [-m <module_num>] [-c <clip_num>] [-r]
 #/
 #/ Options:
 #/   -s <slug>          Optional, course slug
 #/   -m <module_num>    Optional, specific module to download
 #/   -c <clip_num>      Optional, specific clip to download
+#/   -r                 Optional, require cf clearance in requests
+#/                      Default not required
 #/   -h | --help        Display this help message
 
 set -e
@@ -49,7 +51,8 @@ set_var() {
 
 set_args() {
     expr "$*" : ".*--help" > /dev/null && usage
-    while getopts ":hs:m:c:" opt; do
+    _REQUIRE_CF=false
+    while getopts ":hrs:m:c:" opt; do
         case $opt in
             s)
                 _COURSE_SLUG="$OPTARG"
@@ -59,6 +62,9 @@ set_args() {
                 ;;
             c)
                 _CLIP_NUM="$OPTARG"
+                ;;
+            r)
+                _REQUIRE_CF=true
                 ;;
             h)
                 usage
@@ -133,12 +139,17 @@ search_course() {
 
 download_course_list() {
     # $1: course slug
-    local cf f o
-    cf=$(get_cf "$_URL")
-
-    o=$($_CURL -sS "$_URL/player?course=$1" \
-        --header "cookie: cf_clearance=$cf" \
-        --header "user-agent: $_USER_AGENT")
+    local f o
+    if [[ "$_REQUIRE_CF" == true ]]; then
+        local cf
+        cf=$(get_cf "$_URL")
+        o=$($_CURL -sS "$_URL/player?course=$1" \
+            --header "cookie: cf_clearance=$cf" \
+            --header "user-agent: $_USER_AGENT")
+    else
+        o=$($_CURL -sS "$_URL/player?course=$1" \
+            --header "user-agent: $_USER_AGENT")
+    fi
 
     if [[ "$o" == *"Please complete the security check to access the site."* ]]; then
         print_info "cf error, retry now"
@@ -155,18 +166,25 @@ download_course_list() {
 
 fetch_viewclip() {
     # $1: clip id
-    local jwt cf t
+    local jwt t cheader
     jwt=$(get_jwt)
-    cf=$(get_cf "$_URL")
+    cheader="cookie: PsJwt-production=$jwt"
+    if [[ "$_REQUIRE_CF" == true ]]; then
+        local cf
+        cf=$(get_cf "$_URL")
+        cheader="${cheader}; cf_clearance=$cf"
+    fi
+
     t=$(shuf -i "${_MIN_WAIT_TIME}"-"${_MAX_WAIT_TIME}" -n 1)
     print_info "Wait for ${t}s"
     sleep "$t"
 
     o=$($_CURL -sS --limit-rate 1024K --request POST "$_URL/video/clips/v3/viewclip" \
-        --header "cookie: PsJwt-production=$jwt; cf_clearance=$cf" \
+        --header "$cheader" \
         --header "content-type: application/json" \
         --header "user-agent: $_USER_AGENT" \
         --data "{\"clipId\":\"$1\",\"mediaType\":\"mp4\",\"quality\":\"1280x720\",\"online\":true,\"boundedContext\":\"course\",\"versionId\":\"\"}")
+
     if [[ "$o" == *"status\":403"* ]]; then
         print_error "Account blocked! $o"
     fi

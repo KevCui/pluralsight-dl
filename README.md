@@ -29,16 +29,20 @@ pluralsight-dl.sh is a Bash script to download courses from [Pluralsight](https:
 
 ```
 Usage:
-  ./pluralsight-dl.sh [-s <slug>]
+  ./pluralsight-dl.sh [-s <slug>] [-m <module_num>] [-c <clip_num>] [-r]
 
 Options:
   -s <slug>          Optional, course slug
+  -m <module_num>    Optional, specific module to download
+  -c <clip_num>      Optional, specific clip to download
+  -r                 Optional, require cf clearance in requests
+                     Default not required
   -h | --help        Display this help message
 ```
 
 ## Limitation
 
-- Pluralsight has a reCAPTCHA challenge to prevent DDoS. Current method is to fetch necessary cookie value from browser opened by puppeteer. Using this method, user must solve reCAPTCHA correctly once per day. The reCAPTCHA page will be prompted in browser.
+- Pluralsight has a reCAPTCHA challenge to prevent DDoS. If this challenge is activated, current method is to fetch necessary cookie value from browser opened by puppeteer. Using this method, user must solve reCAPTCHA correctly once per day. Executing script with option `-r`, the reCAPTCHA page will be prompted in browser.
 
 - Pluralsight has the request limit. Once the limit is reached, the account will be permanently blocked (403). Therefore, inside the script, there are `_MIN_WAIT_TIME` and `_MAX_WAIT_TIME` in order to generate a random wait time (in second) in-between those 2 values. Hope this wait time will prevent the account being blocked.
 
