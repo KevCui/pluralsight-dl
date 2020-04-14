@@ -152,9 +152,7 @@ download_course_list() {
     fi
 
     if [[ "$o" == *"Please complete the security check to access the site."* ]]; then
-        print_info "cf error, retry now"
-        rm -f "$_CF_FILE"
-        download_course_list "$1"
+        print_error "cf error, retry with -r option"
     elif [[ "$o" == *"Something unexpected has happened. Please try again."* ]]; then
         print_error "Cannot find course list!"
     else
@@ -187,6 +185,8 @@ fetch_viewclip() {
 
     if [[ "$o" == *"status\":403"* ]]; then
         print_error "Account blocked! $o"
+    elif [[ "$o" == *"Please complete the security check to access the site."* ]]; then
+        print_error "cf error, retry with -r option"
     fi
     $_JQ -r '.urls[0].url' <<< "$o"
 }
