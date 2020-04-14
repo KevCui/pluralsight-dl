@@ -183,11 +183,8 @@ fetch_viewclip() {
         --header "user-agent: $_USER_AGENT" \
         --data "{\"clipId\":\"$1\",\"mediaType\":\"mp4\",\"quality\":\"1280x720\",\"online\":true,\"boundedContext\":\"course\",\"versionId\":\"\"}")
 
-    if [[ "$o" == *"status\":403"* ]]; then
-        print_error "Account blocked! $o"
-    elif [[ "$o" == *"Please complete the security check to access the site."* ]]; then
-        print_error "cf error, retry with -r option"
-    fi
+    [[ "$o" == *"status\":403"* ]] && print_error "Account blocked! $o"
+    [[ "$o" == *"Please complete the security check to access the site."* ]] && print_error "cf error, retry with -r option"
     $_JQ -r '.urls[0].url' <<< "$o"
 }
 
