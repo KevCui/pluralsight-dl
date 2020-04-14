@@ -207,7 +207,7 @@ download_clip() {
         mf="$_SCRIPT_PATH/$s/${mn}-${mt//\//_}"
         mkdir -p "$mf"
 
-        c=$($_JQ -r '.modules[] | select(.title == $title) | .contentItems' --arg title "$mt" < "$1")
+        c=$($_JQ -r '.modules[$index | tonumber].contentItems' --arg index "$((mn-1))" < "$1")
 
         cn=1
         while read -r ct; do
@@ -215,7 +215,7 @@ download_clip() {
                 local cid l
 
                 print_info "Downloading [$mn $mt - $cn $ct]"
-                cid=$($_JQ -r '.[] | select(.title == $title) | .id' --arg title "$ct" <<< "$c")
+                cid=$($_JQ -r '.[$index | tonumber].id' --arg index "$((cn-1))" <<< "$c")
                 l=$(fetch_viewclip "$cid")
 
                 $_CURL -L -g -o "${mf}/${cn}-${ct//\//_}.mp4" "$l"
