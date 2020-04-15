@@ -31,7 +31,7 @@ const hMode = (program.show === undefined) ? true : false;
     const page = await browser.newPage();
     await page.setUserAgent(program.agent);
     await page.goto(program.url, {timeout: 30000, waitUntil: 'domcontentloaded'});
-    await page.waitForNavigation();
+    await page.waitForNavigation({timeout: 60000});
     const cookie = await page.cookies();
     console.log(JSON.stringify(cookie));
     await browser.close()

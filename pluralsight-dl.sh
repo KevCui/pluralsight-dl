@@ -147,7 +147,7 @@ download_course_list() {
     else
         if [[ "$_REQUIRE_CF" == true ]]; then
             local cf
-            cf=$(get_cf "$_URL")
+            cf=$(get_cf "$_URL/id/")
             o=$($_CURL -sS "$_URL/player?course=$1" \
                 --header "cookie: cf_clearance=$cf" \
                 --header "user-agent: $_USER_AGENT")
@@ -174,7 +174,7 @@ fetch_viewclip() {
     cheader="cookie: PsJwt-production=$jwt"
     if [[ "$_REQUIRE_CF" == true ]]; then
         local cf
-        cf=$(get_cf "$_URL")
+        cf=$(get_cf "$_URL/id/")
         cheader="${cheader}; cf_clearance=$cf"
     fi
 
