@@ -140,26 +140,30 @@ search_course() {
 download_course_list() {
     # $1: course slug
     local f o
-    if [[ "$_REQUIRE_CF" == true ]]; then
-        local cf
-        cf=$(get_cf "$_URL")
-        o=$($_CURL -sS "$_URL/player?course=$1" \
-            --header "cookie: cf_clearance=$cf" \
-            --header "user-agent: $_USER_AGENT")
+    f="$_SCRIPT_PATH/${1}"
+    mkdir -p "$f"
+    if [[ -f "$f/$_SOURCE_FILE" ]]; then
+        print_info "$f/$_SOURCE_FILE exists, skip downloading process"
     else
-        o=$($_CURL -sS "$_URL/player?course=$1" \
-            --header "user-agent: $_USER_AGENT")
-    fi
+        if [[ "$_REQUIRE_CF" == true ]]; then
+            local cf
+            cf=$(get_cf "$_URL")
+            o=$($_CURL -sS "$_URL/player?course=$1" \
+                --header "cookie: cf_clearance=$cf" \
+                --header "user-agent: $_USER_AGENT")
+        else
+            o=$($_CURL -sS "$_URL/player?course=$1" \
+                --header "user-agent: $_USER_AGENT")
+        fi
 
-    if [[ "$o" == *"Please complete the security check to access the site."* ]]; then
-        [[ $_REQUIRE_CF == true ]] && rm -f "$_CF_FILE"
-        print_error "cf error, retry with -r option"
-    elif [[ "$o" == *"Something unexpected has happened. Please try again."* ]]; then
-        print_error "Cannot find course list!"
-    else
-        f="$_SCRIPT_PATH/${1}"
-        mkdir -p "$f"
-        grep tableOfContents: <<< "$o" | sed -E 's/.*tableOfContents: //' > "$f/$_SOURCE_FILE"
+        if [[ "$o" == *"Please complete the security check to access the site."* ]]; then
+            [[ $_REQUIRE_CF == true ]] && rm -f "$_CF_FILE"
+            print_error "cf error, retry with -r option"
+        elif [[ "$o" == *"Something unexpected has happened. Please try again."* ]]; then
+            print_error "Cannot find course list!"
+        else
+            grep tableOfContents: <<< "$o" | sed -E 's/.*tableOfContents: //' > "$f/$_SOURCE_FILE"
+        fi
     fi
 }
 
