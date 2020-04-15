@@ -3,14 +3,17 @@
 # Pluralsight course downloader
 #
 #/ Usage:
-#/   ./pluralsight-dl.sh [-s <slug>] [-m <module_num>] [-c <clip_num>] [-r]
+#/   ./pluralsight-dl.sh [-s <slug>] [-m <module_num>] [-c <clip_num>] [-r] [-l <file_dir>]
 #/
 #/ Options:
 #/   -s <slug>          Optional, course slug
 #/   -m <module_num>    Optional, specific module to download
 #/   -c <clip_num>      Optional, specific clip to download
 #/   -r                 Optional, require cf clearance in requests
-#/                      Default not required
+#/                      default not required
+#/   -l <file_dir>      Optional, enable local mode, read clip response from local dir
+#/                      file_dir contains viewclip response json, file name must be clipId
+#/                      default disabled
 #/   -h | --help        Display this help message
 
 set -e
@@ -52,7 +55,7 @@ set_var() {
 set_args() {
     expr "$*" : ".*--help" > /dev/null && usage
     _REQUIRE_CF=false
-    while getopts ":hrs:m:c:" opt; do
+    while getopts ":hrl:s:m:c:" opt; do
         case $opt in
             s)
                 _COURSE_SLUG="$OPTARG"
@@ -65,6 +68,9 @@ set_args() {
                 ;;
             r)
                 _REQUIRE_CF=true
+                ;;
+            l)
+                _LOCAL_MODE_FOLDER="$OPTARG"
                 ;;
             h)
                 usage
@@ -169,31 +175,37 @@ download_course_list() {
 
 fetch_viewclip() {
     # $1: clip id
-    local jwt t cheader
-    jwt=$(get_jwt)
-    cheader="cookie: PsJwt-production=$jwt"
-    if [[ "$_REQUIRE_CF" == true ]]; then
-        local cf
-        cf=$(get_cf "$_URL/id/")
-        cheader="${cheader}; cf_clearance=$cf"
+    if [[ -z "${_LOCAL_MODE_FOLDER:-}" ]]; then
+        local jwt t cheader
+        jwt=$(get_jwt)
+        cheader="cookie: PsJwt-production=$jwt"
+        if [[ "$_REQUIRE_CF" == true ]]; then
+            local cf
+            cf=$(get_cf "$_URL/id/")
+            cheader="${cheader}; cf_clearance=$cf"
+        fi
+
+        t=$(shuf -i "${_MIN_WAIT_TIME}"-"${_MAX_WAIT_TIME}" -n 1)
+        print_info "Wait for ${t}s"
+        sleep "$t"
+
+        o=$($_CURL -sS --limit-rate 1024K --request POST "$_URL/video/clips/v3/viewclip" \
+            --header "$cheader" \
+            --header "content-type: application/json" \
+            --header "user-agent: $_USER_AGENT" \
+            --data "{\"clipId\":\"$1\",\"mediaType\":\"mp4\",\"quality\":\"1280x720\",\"online\":true,\"boundedContext\":\"course\",\"versionId\":\"\"}")
+
+        [[ "$o" == *"status\":403"* ]] && print_error "Account blocked! $o"
+
+        if [[ "$o" == *"Please complete the security check to access the site."* ]]; then
+            [[ $_REQUIRE_CF == true ]] && rm -f "$_CF_FILE"
+            print_error "cf error, retry with -r option"
+        fi
+    else
+        print_info "Offline mode enabled, reading files in $_LOCAL_MODE_FOLDER"
+        o=$(cat "$_LOCAL_MODE_FOLDER/$1")
     fi
 
-    t=$(shuf -i "${_MIN_WAIT_TIME}"-"${_MAX_WAIT_TIME}" -n 1)
-    print_info "Wait for ${t}s"
-    sleep "$t"
-
-    o=$($_CURL -sS --limit-rate 1024K --request POST "$_URL/video/clips/v3/viewclip" \
-        --header "$cheader" \
-        --header "content-type: application/json" \
-        --header "user-agent: $_USER_AGENT" \
-        --data "{\"clipId\":\"$1\",\"mediaType\":\"mp4\",\"quality\":\"1280x720\",\"online\":true,\"boundedContext\":\"course\",\"versionId\":\"\"}")
-
-    [[ "$o" == *"status\":403"* ]] && print_error "Account blocked! $o"
-
-    if [[ "$o" == *"Please complete the security check to access the site."* ]]; then
-        [[ $_REQUIRE_CF == true ]] && rm -f "$_CF_FILE"
-        print_error "cf error, retry with -r option"
-    fi
     $_JQ -r '.urls[0].url' <<< "$o"
 }
 

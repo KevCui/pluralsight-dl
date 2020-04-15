@@ -29,14 +29,17 @@ pluralsight-dl.sh is a Bash script to download courses from [Pluralsight](https:
 
 ```
 Usage:
-  ./pluralsight-dl.sh [-s <slug>] [-m <module_num>] [-c <clip_num>] [-r]
+  ./pluralsight-dl.sh [-s <slug>] [-m <module_num>] [-c <clip_num>] [-r] [-l <file_dir>]
 
 Options:
   -s <slug>          Optional, course slug
   -m <module_num>    Optional, specific module to download
   -c <clip_num>      Optional, specific clip to download
   -r                 Optional, require cf clearance in requests
-                     Default not required
+                     default not required
+  -l <file_dir>      Optional, enable local mode, read clip response from local dir
+                     file_dir contains viewclip response json, file name must be clipId
+                     default disabled
   -h | --help        Display this help message
 ```
 
