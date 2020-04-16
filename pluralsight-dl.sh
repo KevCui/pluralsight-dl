@@ -236,7 +236,11 @@ download_clip() {
                 cid=$($_JQ -r '.[$index | tonumber].id' --arg index "$((cn-1))" <<< "$c")
                 l=$(fetch_viewclip "$cid")
 
-                $_CURL -L -g -o "${mf}/${cn}-${ct//\//_}.mp4" "$l"
+                if [[ "$l" == "" ]]; then
+                    print_info "Cannot find link for clip $ct, skip"
+                else
+                    $_CURL -L -g -o "${mf}/${cn}-${ct//\//_}.mp4" "$l"
+                fi
             fi
 
             cn=$((cn+1))
