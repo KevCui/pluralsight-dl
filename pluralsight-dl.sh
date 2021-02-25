@@ -82,6 +82,7 @@ set_args() {
         esac
     done
 }
+
 is_file_expired() {
     # $1: file
     # $2: n days
